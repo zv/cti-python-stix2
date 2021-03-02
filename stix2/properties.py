@@ -28,6 +28,14 @@ ERROR_INVALID_ID = (
     "not a valid STIX identifier, must match <object-type>--<UUID>: {}"
 )
 
+UUID_PATTERN = re.compile(
+    '(--)?'
+    '([a-fA-F0-9]{8})'
+    '-([a-fA-F0-9]{4})'
+    '-((?P<VERSION>[a-fA-F0-9])[a-fA-F0-9]{3})'
+    '-(((?P<RFC4122>[89aAbB])|[a-fA-F0-9])[a-fA-F0-9]{3})'
+    '-([a-fA-F0-9]{12})',
+)
 
 def _check_uuid(uuid_str, spec_version):
     """
@@ -40,13 +48,17 @@ def _check_uuid(uuid_str, spec_version):
     :return: True if the UUID is valid, False if not
     :raises ValueError: If uuid_str is malformed
     """
-    uuid_obj = uuid.UUID(uuid_str)
+    m = re.fullmatch(UUID_PATTERN, uuid_str)
+    if m:
+        ok = bool(m['RFC4122'])
 
-    ok = uuid_obj.variant == uuid.RFC_4122
-    if ok and spec_version == "2.0":
-        ok = uuid_obj.version == 4
+        if ok and spec_version == "2.0":
+            ok = m['VERSION'] == '4'
 
-    return ok
+        return ok
+    else:
+        raise ValueError("Invalid UUID: {}".format(uuid_str))
+
 
 
 def _validate_id(id_, spec_version, required_prefix):
